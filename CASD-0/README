@@ -1,0 +1,377 @@
+CASD- Casuistry And Social Dilemmas
+Luis R. Izquierdo
+
+There is a user guide available in http://www.macaulay.ac.uk/fearlus/casd/ 
+which includes the information provided here and much more.
+
+------------------------------------------------------------------------------
+
+1. Installation
+Assuming you have the appropriate version of Swarm installed on your platform,
+and your environment set up to use it, installation of CASD model 0 involves 
+unpacking the gzipped tar file, and compiling the source code therein from a 
+terminal window in Unix, or the Swarm >> Terminal application in Windows:
+
+	gunzip -c casd-0.tar.gz | tar xf -
+	cd CASD-0
+	make
+
+The application should compile successfully without error, creating the 
+executable casd on a Unix platform, or casd.exe on Windows. I have 
+experienced compilation problems when I use WinZip to untar the file 
+casd-0.tar, so please use tar as indicated above.
+
+CASD takes special care of floating point numbers, following work led by 
+Gary Polhill that showed the nasty effects that floating point numbers can 
+have in Agent-Based simulation. If you use only integers as values for all 
+the parameters you should never suffer floating point errors since the only 
+mathematical operations used in the model are addition, subtraction and 
+multiplication. In any case, if you are on a Unix platform you can check for 
+floating point errors for any value of the parameters. In order to use the 
+full capacity to detect floating point errors implemented in CASD (provided 
+by Gary Polhill), you have to substitute MakefileDoubles for Makefile. 
+
+------------------------------------------------------------------------------
+
+2. Parameters of the program
+The parameters of the program can be classified into 4 categories:
+
+******************************************************************************
+
+2.1. Spatial parameters
+In the implementation of the model, Agents are distributed on a regular 
+bounded rectangular grid of size xSize x ySize (one Agent per cell). 
+The topology of the grid may be planar or toroidal.
+
+The grid is used to define the Agents' set of neighbours using the Moore 
+or the von Neumann neighbourhood function with user-specified radius.
+
+The spatial parameters in the program are the following:
+ 
+XSize		{natural number}
+YSize		{natural number}
+envShape	{planar, toroidal}
+nbrhood 	{moore, von-neumann}
+radius		{natural number}	 
+
+******************************************************************************
+
+2.2. Case-base parameters
+ 
+bMemory				Backwards Memory 
+				{natural number + 0}
+fMemory				Forward Memory 
+				{natural number + 0}
+descriptorOtherDefectorsStr 	Use the number of neighbouring defectors 
+				as a descriptor of the agents' state of the
+				world
+				{YES, NO}
+descriptorMyDecisionsStr 	Use the agent's own decisions as a descriptor
+				of their state of the world
+				{YES, NO}	 
+
+******************************************************************************
+
+2.3. Dimensions of utility's Thresholds
+
+expThreshold		Aspiration Threshold. When recalling only similar 
+			situations in which the Agent made just one certain 
+			decision, if the expected payoff of that decision 
+			equals or exceeds the Aspiration Threshold, the 
+			decision is kept without exploring the other one. 
+			{Double}
+peerPressureThreshold	Maximum number of neighbours that an Agent is prepared
+			to be disapproved of. In other words, the maximum 
+			number of disapproving neighbours that an Agent can
+			bear. If the expected number of disapproving 
+			neighbours is higher than the Peer Pressure Threshold,
+			the Agent will always cooperate (the peer pressure is 
+			too high, if you like), no matter the expected payoff. 
+			{integer}
+
+******************************************************************************
+
+2.4. Structure of the game played by the agents
+ 
+payoffCalClassStr	This is a class (which must conform to 
+			PayoffCalculator protocol) that sets the payoffs for 
+			every possible situation. So far, the Symmetric2x2 
+			game and the Tragedy of the Commons game are 
+			implemented.
+payoffParameterFile	This is a parameter file for the payoffCalClassStr 
+			class.	 
+
+------------------------------------------------------------------------------
+
+3. How to use the program
+
+******************************************************************************
+
+3.1. Parameter Files
+
+You can use the parameter files in the directory ./parameters/ or edit your
+own parameter files. The examples below correspond to the files 
+./parameters/PD/1x2.scm, 
+./parameters/PD/PD.scm, and 
+./parameters/TC/reward.scm.
+
+a. Edit a main parameter file, such as the following (./parameters/PD/1x2.scm):
+ 
+(list
+ (cons 'modelSwarm
+       (make-instance 'ModelSwarm
+	#:bMemory 1
+	#:fMemory 1
+	#:descriptorOtherDefectorsStr YES
+	#:descriptorMyDecisionsStr YES
+	#:expThresholdStr DoubleSimple=20.0
+	#:peerPressureThreshold 1
+	#:envShape planar
+	#:nbrhood moore
+	#:xSize 1
+      	#:ySize 2
+     	#:radius 1
+	#:payoffCalClassStr Symmetric2x2
+	#:payoffParameterFile PD.scm)))	 
+
+b. Edit a payoff parameter file (whose name is the argument of 
+payoffParameterFile in the main parameter file) for the payoffCalClassStr 
+payoff structure. Examples are provided below:
+
+For the Prisoners' Dilemma (./parameters/PD/PD.scm):
+ 
+(list
+ (cons 'payoffCalculator
+       (make-instance 'Symmetric2x2
+	#:temptationStr DoubleSimple=10.0
+	#:rewardStr DoubleSimple=9.0
+	#:punishmentStr DoubleSimple=2.0
+	#:suckersStr DoubleSimple=1.0)))	 
+
+For the Tragedy of the Commons game (./parameters/TC/reward.scm):
+ 
+(list
+ (cons 'payoffCalculator
+       (make-instance 'Reward
+	#:defectionYieldStr DoubleSimple=10.0
+	#:cooperationYieldStr DoubleSimple=9.0
+	#:rewardStr DoubleSimple=10.0
+	#:rewardIfThisOrFewer 15)))	 
+
+******************************************************************************
+
+3.2. Usage synopsis and command-line options
+
+In the usage synopsis below, square brackets [ ] are used to denote an 
+optional element, and angle brackets < > to describe some value the user 
+should provide.
+
+./casd [+v <verbosityLevel>] [+V <verbosityFile>] [+t <stopTime>] 
+	[+c <checkTime>] [+d <decisionsString>] [+b] <parameterFile> [-s]  
+	[-S <seed>]  [-b]  [other Swarm flags]
+
+Please note that the + options must appear first after the command and before 
+the parameter file, whereas the - options must appear after the parameter 
+file. As we can see above, the only indispensable requirement is to specify 
+the main parameter file. 
+
+The command-line options are explained below.
+
++v <verbosityLevel> takes an integer argument specifying the level of 
+verbosity (higher numbers mean more messages, according to the verbosity file) 
+
++V <verbosityFile> takes a filename argument. This file is called the 
+'verbosity file'. It will have to contain a list of message types that are 
+generated by the system, and a verbosity level at or above which the messages 
+are to be printed. The default 'verbosity file' is casd.verby. An example of 
+how this file looks like is the following:
+ 
+ParseArgs 2
+Progress 2
+StateUpdate 5
+AgentsUpdatingHistory 5
+CaseFound 10
+Cycles 2
+AgentsResetting 2
+PayoffCalcUpdatingDecisions 10
+PayoffCalcGivingPayoffs 10
+AgentsDeciding 10
+AgentsRemembering 10
+AgentsStateUpdate 10
+AgentsDecidingAtRandom 4
+Equilibria 1
+NumberRandomDecisions 10
+AgentsJudging 10
+CyclicBehaviour 1
+AgentsDecidingDeterministically 10
+NumberDeterministicDecisions 10
+AgentsUpdatingAge 10	 
+
+For example, using the verbosity file above, if the verbosity level set after 
+the option +v is 2, the following type of messages will be printed: ParseArgs,
+Progress, Cycles, AgentsResetting, Equilibria, and CyclicBehaviour.
+
++t <stopTime> takes an integer argument specifying the stop time-step. The 
+simulation will stop at time-step stopTime. When it stops in GUI mode, it 
+requires the user to press Start in the control panel to go on.
+
++c <checkTime> takes an integer argument specifying the time-step at which 
+the program will start to search for a cyclic behaviour (checkTime). At 
+checkTime, if there is a cyclic behaviour and the level of verbosity (set 
+after +v) equals or exceeds the verbosity level required for cyclicBehaviour 
+(set in the 'verbosity file'), the cycle will be detected. Stable universal 
+cooperation and stable universal defection are detected always as soon as 
+they occur, as long as the verbosity level equals or exceeds the verbosity 
+level required for Equilibria (even if the +c option is not set). If the 
+simulation has not reached a cycle at checkTime (either because checkTime is 
+too low or because the initial conditions do not lead to a cyclic behaviour), 
+the program issues a warning as soon as it detects that condition and stops 
+the simulation. Therefore, in order to detect cycles, the argument of +c must 
+not be very low; otherwise, the cycle will not be detected. If the simulation 
+has reached a cycle at checkTime, it will be detected. It is important to 
+note that in the process of detecting any kind of cycle there is the implicit 
+(not-necessarily-true) assumption that the cycle is sustainable, i.e. that 
+Agents can survive indefinitely going through that cycle repeated times. 
+If that is not the case, Agents will eventually die and the cycle will be
+broken.
+
++d <decisionsString> is to do deterministic runs, as opposed to runs with 
+stochastic components. +d takes a string argument such as CCDDCDDCD. Each 
+letter represents a decision (Cooperate or Defect). When, according to the 
+program requirement specifications, a random decision should take place, if 
+this option is used, the 'random' decision will be taken from the string 
+argument from left to right. As an example, if the string argument is CDD, 
+the first 'random' decision will be Cooperate, the second one Defect, and 
+the third one Defect. Note that this is for the model, not for a specific 
+Agent. If the string is too short, the program aborts, but it kindly lets 
+you know what length would be sufficient, according to your parameters. 
+Please, note that the sufficient length provided is only valid for games 
+in which there are no players who get the same payoff when they select 
+different actions (otherwise the number of random decisions could be 
+infinite), where Agents do not die (otherwise the number of random decisions 
+could be infinite), and where the forward Memory is equal to 1 (otherwise 
+the number could be infinite or so high that, although we could still give 
+an upper bound, it would not be of much use because exploring the parameter 
+space would be intractable).
+
++b makes graphs in black & white.
+
+parameterFile is the name of the main parameter file. It is the only 
+required argument.
+
+-s tells the program to use the current time to determine the seed value 
+to use.
+
+-S <seed> takes a 32-bit integer argument specifying the seed. This option 
+is not available in Swarm 2.1.1.
+
+-b sets batch mode run rather than GUI mode run, which is the default mode 
+run. Batch mode is faster than GUI mode, and suitable for running as a 
+background process.
+
+Examples: 
+From: ./parameters/PD/
+../../casd +v 1 +V ../../casd.verby +c 50 +t 100 +d CCCCDDCC 1x2.scm -b 
+../../casd +v 1 +V ../../casd.verby +c 50 1x2.scm -S 1239574632
+
+******************************************************************************
+
+3.3. Batch mode
+As mentioned in section 3.2, to run CASD in batch mode, give the -b flag 
+to the command line. A typical command to run the model in batch mode would 
+look like this:
+
+/full/path/to/casd +v 1 +V /full/path/to/casd.verby +c 50 +t 100 1x2.scm -b -s 
+
+One point to note from this example is that the model is being run from the 
+directory containing all the parameter files. If this is not done, then the 
+parameter filename should include the full path. In batch mode, the +t option 
+is required to specify when the simulation should terminate.
+
+******************************************************************************
+
+3.4. Analysing thousands of runs: Scripts
+
+To analyse how the system usually behaves, it is necessary to run multiple 
+simulation runs with different random seeds and analyse their output. To do 
+this, Gary implemented an extremely useful perl script that we provide in 
+the release of CASD-0. The name of the script is cbr-replicator.pl, and it 
+can be found in the 'script' directory.
+
+In the usage synopsis below, curly brackets { } are used to denote one of a 
+series of options separated by a vertical bar | for an element value, square 
+brackets [ ] are used to denote an optional element, and angle brackets < > 
+to describe some value the user should provide.
+
+./cbr-replicator.pl <mode> [{<runs>|<filename>}] <prog> <param> 
+			[<cmd params...>]
+
+The command-line options are explained below:
+
+<mode> can be either 'Random' or 'Deterministic'. In Random mode, multiple 
+runs will be conducted either using the -s flag (use the current time to 
+determine the seed value) or using a file with our own seeds. In Deterministic
+mode the -d flag will be used when running CASD. The script will work out the 
+maximum number of random decisions that can occur in a run given the 
+parameters provided (note restrictions explained in footnote 2!), and run as 
+many simulations as necessary (using different deterministic strings) to 
+exhaustively explore the whole range of possible outcomes for the given 
+parameters.
+
+<runs> applies only if mode is 'Random'. It specifies the number of runs that 
+will be conducted using the -s flag.
+
+<filename> applies only if mode is 'Random'. It specifies a file with seeds 
+to use. This option will not work in Swarm 2.1.1, where the -S flag is not 
+available.
+
+<prog> is the full path to the program to use (casd).
+
+<param> is the main parameter file to use with the program.
+
+<cmd param...> are the command line parameters to send to the program. These 
+should be with all + (model specific) options first, - (Swarm specific) 
+options last.
+
+Examples:
+From: ./parameters/PD/
+
+../../script/cbr-replicator.pl Random 10 ../../casd 1x2.scm +v 1 +V ../../casd.verby +c 50 +t 70 -b
+
+../../script/cbr-replicator.pl Random cbr-rep-20040309-130032.seeds ../../casd 1x2.scm +v 1 +V ../../casd.verby +c 50 +t 70 -b
+	
+../../script/cbr-replicator.pl Deterministic ../../casd 1x2.scm +v 1 +V ../../casd.verby +c 50 +t 70 -b
+
+The outputs of the script are three files with the following names:
+
+cbr-rep-DATE-TIME-results.txt 	(e.g. cbr-rep-20040309-130032-results.txt)
+This file presents a count of the number of simulation runs that have ended 
+up in a cycle of length x where the reward has been given y times. 
+ 
+Stable Cooperations: 	3 times
+Stable Defections: 	5 times
+Reward given 	0	out of 	1	 times:	5
+Reward given 	1	out of 	1	 times:	3
+Reward given 	1	out of 	2	 times:	2 
+Total:	10	 
+The reward rate of a cycle equals y/x. The file provides the average reward 
+rate and its standard error over all the cycles. 
+ 
+Average reward rate:	0.4
+Standard Error of the average reward rate:	0.145296631451356	 
+
+Finally, it presents the average payoff obtained by the group and its 
+standard error, calculated over all the cycles.
+ 
+Total:	10
+Average Group Payoff:	9.6
+Standard Error of the average Group Payoff:	2.03415284031898	 
+
+cbr-rep-DATE-TIME.log 		(e.g. cbr-rep-20040309-130032.log)
+This is a log file where the progress of the actions performed by 
+cbr-replicator is saved.
+
+cbr-rep-DATE-TIME.seeds 	(e.g. cbr-rep-20040309-130032.seeds)
+This is a file where all the seeds used by cbr-replicator are saved. It is 
+produced only in Random mode when the user requires conducting a certain 
+number of runs.
